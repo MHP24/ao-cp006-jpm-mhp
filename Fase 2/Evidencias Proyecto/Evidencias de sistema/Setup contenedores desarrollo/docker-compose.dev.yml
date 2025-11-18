@@ -1,0 +1,128 @@
+services:
+  quizix-rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: quizix-rabbitmq
+    ports:
+      - 5672:5672
+      - 15672:15672
+    environment:
+      RABBITMQ_DEFAULT_USER: dev_user
+      RABBITMQ_DEFAULT_PASS: dev_pass123456
+    restart: always
+
+  quizix-postgres:
+    build:
+      context: .
+      dockerfile: Dockerfile.pgsql
+    container_name: quizix-postgres
+    environment:
+      POSTGRES_DB: quizix_db
+      POSTGRES_USER: quizix_user
+      POSTGRES_PASSWORD: quizix_password123
+      TZ: UTC
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./etc/postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U quizix_user -d quizix_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  quizix-client-gateway:
+    depends_on:
+      - quizix-rabbitmq
+    restart: on-failure:15
+    build:
+      context: ./quizix-client-gateway
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./quizix-client-gateway/src:/usr/src/app/src
+    env_file: ./quizix-client-gateway/.env
+    ports:
+      - 9093:9093
+
+  quizix-auth-ms:
+    depends_on:
+      - quizix-rabbitmq
+      - quizix-postgres
+    restart: on-failure:15
+    build:
+      context: ./quizix-auth-ms
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./quizix-auth-ms/src:/usr/src/app/src
+    env_file: ./quizix-auth-ms/.env
+
+  quizix-document-ms:
+    depends_on:
+      - quizix-rabbitmq
+      - quizix-postgres
+    restart: on-failure:15
+    build:
+      context: ./quizix-document-ms
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./quizix-document-ms/src:/usr/src/app/src
+    env_file: ./quizix-document-ms/.env
+
+  quizix-document-processor-ms:
+    depends_on:
+      - quizix-rabbitmq
+    restart: on-failure:15
+    build:
+      context: ./quizix-document-processor-ms
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./quizix-document-processor-ms/src:/usr/src/app/src
+    env_file: ./quizix-document-processor-ms/.env
+
+  quizix-embedding-ms:
+    depends_on:
+      - quizix-rabbitmq
+    restart: on-failure:15
+    build:
+      context: ./quizix-embedding-ms
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./quizix-embedding-ms/src:/usr/src/app/src
+    env_file: ./quizix-embedding-ms/.env
+
+  quizix-semantic-engine-ms:
+    depends_on:
+      - quizix-rabbitmq
+      - quizix-postgres
+    restart: on-failure:15
+    build:
+      context: ./quizix-semantic-engine-ms
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./quizix-semantic-engine-ms/src:/usr/src/app/src
+    env_file: ./quizix-semantic-engine-ms/.env
+
+  quizix-quiz-ms:
+    depends_on:
+      - quizix-rabbitmq
+      - quizix-postgres
+    restart: on-failure:15
+    build:
+      context: ./quizix-quiz-ms
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./quizix-quiz-ms/src:/usr/src/app/src
+    env_file: ./quizix-quiz-ms/.env
+
+  quizix-generative-ai-ms:
+    depends_on:
+      - quizix-rabbitmq
+    restart: on-failure:15
+    build:
+      context: ./quizix-generative-ai-ms
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./quizix-generative-ai-ms/src:/usr/src/app/src
+    env_file: ./quizix-generative-ai-ms/.env
+    ports:
+      - 8888:8888

@@ -1,0 +1,34 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Index {
+  id        String   @id @default(uuid()) @map("id")
+  index     String   @map("index")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // * Relations
+  documentEmbeddings DocumentEmbedding[]
+
+  @@map("indexes")
+}
+
+model DocumentEmbedding {
+  id        String                     @id @default(uuid()) @map("id")
+  indexId   String                     @map("index_id")
+  text      String                     @map("text")
+  page      Int                        @map("page")
+  vector    Unsupported("vector(384)") @map("vector")
+  createdAt DateTime                   @default(now()) @map("created_at")
+  updatedAt DateTime                   @updatedAt @map("updated_at")
+
+  // * Relations
+  index Index @relation(fields: [indexId], references: [id])
+
+  @@map("document_embeddings")
+}

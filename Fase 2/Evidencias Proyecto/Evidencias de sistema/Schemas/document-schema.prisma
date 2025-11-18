@@ -1,0 +1,32 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum DocumentStatus {
+  uploaded
+  processing
+  failed
+  ready
+}
+
+model Document {
+  id               String         @id @default(uuid()) @map("id")
+  key              String         @map("key")
+  directory        String         @map("directory")
+  originalName     String         @map("original_name")
+  mimeType         String         @map("mime_type")
+  pagesCount       Int            @default(0) @map("pages_count")
+  size             Int            @map("size")
+  userId           String?        @map("user_id")
+  processingStatus DocumentStatus @default(uploaded) @map("processing_status")
+  isActive         Boolean        @default(true) @map("is_active")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+
+  @@map("documents")
+}

@@ -1,0 +1,153 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Quiz {
+  id           String   @id @default(uuid()) @map("id")
+  name         String   @map("name")
+  description  String   @map("description")
+  introduction String?  @map("introduction")
+  userId       String   @map("user_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  isActive     Boolean  @default(false) @map("is_active")
+  isVisible    Boolean  @default(true) @map("is_visible")
+
+  // * Relations
+  quizConfig   QuizConfig?
+  question     Question[]
+  participant  Participant[]
+  attempt      Attempt[]
+  quizDocument QuizDocument[]
+
+  @@map("quizzes")
+}
+
+enum QuizType {
+  EXAM
+  SURVEY
+}
+
+model QuizConfig {
+  id                   String   @id @default(uuid()) @map("id")
+  quizId               String   @unique @map("quiz_id")
+  type                 QuizType @map("type")
+  duration             Int?     @map("duration")
+  maxAttempts          Int?     @map("max_attempts")
+  maxScore             Int?     @map("max_score")
+  openDate             DateTime @default(now()) @map("open_date")
+  closeDate            DateTime @default(now()) @map("close_date")
+  requiresParticipants Boolean  @default(true) @map("requires_participants")
+  lockResults          Boolean  @default(false) @map("lock_results")
+
+  // * Relations
+  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@map("quiz_configs")
+}
+
+model QuizDocument {
+  id           String @id @default(uuid()) @map("id")
+  documentId   String @map("document_id")
+  documentName String @map("document_name")
+  quizId       String @map("quiz_id")
+
+  // * Relations
+  quiz     Quiz       @relation(fields: [quizId], references: [id])
+  question Question[]
+
+  @@map("quiz_documents")
+}
+
+model Participant {
+  id        String   @id @default(uuid()) @map("id")
+  quizId    String   @map("quiz_id")
+  email     String   @map("email")
+  createdAt DateTime @default(now()) @map("created_at")
+  isActive  Boolean  @default(true) @map("is_active")
+
+  // * Relations
+  quiz    Quiz      @relation(fields: [quizId], references: [id])
+  answer  Answer[]
+  attempt Attempt[]
+
+  @@map("participants")
+}
+
+model Attempt {
+  id            String    @id @default(uuid()) @map("id")
+  participantId String?   @map("participant_id")
+  quizId        String    @map("quiz_id")
+  startedAt     DateTime  @default(now()) @map("started_at")
+  completedAt   DateTime? @map("completed_at")
+  score         Int?      @map("score")
+
+  // * Relations
+  participant Participant? @relation(fields: [participantId], references: [id])
+  quiz        Quiz         @relation(fields: [quizId], references: [id])
+  answer      Answer[]
+
+  @@map("attempts")
+}
+
+enum QuestionType {
+  SINGLE_CHOICE
+  OPEN_ENDED
+}
+
+model Question {
+  id             String       @id @default(uuid()) @map("id")
+  quizId         String       @map("quiz_id")
+  statement      String       @map("statement")
+  type           QuestionType @map("type")
+  score          Int?         @map("score")
+  quizDocumentId String?      @map("quiz_document_id")
+  referencePage  Int?         @map("reference_page")
+  isVisible      Boolean      @default(true) @map("is_visible")
+
+  // * Relations
+  quiz         Quiz          @relation(fields: [quizId], references: [id])
+  options      Option[]
+  answer       Answer[]
+  quizDocument QuizDocument? @relation(fields: [quizDocumentId], references: [id])
+
+  @@map("questions")
+}
+
+model Option {
+  id         String  @id @default(uuid()) @map("id")
+  questionId String  @map("question_id")
+  text       String  @map("text")
+  isCorrect  Boolean @default(false) @map("is_correct")
+  isVisible  Boolean @default(true) @map("is_visible")
+
+  // * Relations
+  question Question @relation(fields: [questionId], references: [id])
+  answer   Answer[]
+
+  @@map("options")
+}
+
+model Answer {
+  id            String   @id @default(uuid()) @map("id")
+  questionId    String   @map("question_id")
+  optionId      String?  @map("option_id")
+  attemptId     String   @map("attempt_id")
+  text          String?  @map("text")
+  participantId String?  @map("participant_id")
+  registeredAt  DateTime @map("registered_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  // * Relations
+  question    Question     @relation(fields: [questionId], references: [id])
+  participant Participant? @relation(fields: [participantId], references: [id])
+  attempt     Attempt      @relation(fields: [attemptId], references: [id])
+  option      Option?      @relation(fields: [optionId], references: [id])
+
+  @@unique([questionId, attemptId])
+  @@map("answers")
+}
